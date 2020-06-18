@@ -1,5 +1,6 @@
-var net = require('net');
-var server = net.createServer();
+const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io")
 var admin = require("firebase-admin");
 
 var serviceAccount = require("./key.json");
@@ -9,33 +10,45 @@ admin.initializeApp({
   databaseURL: "https://cloud-ba7c0.firebaseio.com"
 });
 
-server.listen(5000, '0.0.0.0')
+const port = process.env.PORT || 5000;
 
-server.on('connection',  (socket) => {
-  var clientAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-  socket.on('data', function(data){
-    const auth = data.toString()
-    var db = admin.database()
+const app = express();
+app.use(function (req, res, next) {
+  res.send('Hello World')
+})
+const server = http.createServer(app);
+
+const io = socketIo(server);
+
+let interval;
+
+io.on("connection", (socket) => {
+  var db = admin.database()
+  let auth
+  let userData
+  socket.on('data', (data) => {
+    auth = data.toString()
     db.ref(auth).once('value',function(snap){
       var user = snap.val()
+      userData = user
       try{
         if(auth === user.id){
-          socket.write(`Login Successful: Welcome ${user.name}\r\n`);
-          console.log(`new client connected: ${clientAddress}`);
+          console.log(`${user.name} is online - id: ${user.id}`)
+          db.ref(`${auth}/status`).set({online:true})
         }
         else{
-          socket.write('Error: Auth failed\r\n');
-          socket.destroy()
+          socket.disconnect()
         }
       }
       catch(err){
-        socket.write('Error: Auth failed\r\n');
-        socket.destroy()
+        socket.disconnect()
       }
     })
-	})
-});
+  })
+  socket.on("disconnect", () => {
+    console.log(`${userData.name} has disconnected - id: ${userData.id}`)
+    db.ref(`${auth}/status`).set({online:false})
+  })
+})
 
-server.on('error', (err) => {
-  console.log(`Error occurred in ${clientAddress}: ${err.message}`);
-});
+server.listen(port, () => console.log(`Listening on port ${port}`));
