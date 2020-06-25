@@ -23,31 +23,10 @@ const io = socketIo(server);
 let interval;
 
 io.on("connection", (socket) => {
-  var db = admin.database()
-  let auth
-  let userData
-  socket.on('data', (data) => {
-    auth = data.toString()
-    db.ref(auth).once('value',function(snap){
-      var user = snap.val()
-      userData = user
-      try{
-        if(auth === user.id){
-          console.log(`${user.name} is online - id: ${user.id}`)
-          db.ref(`${auth}/status`).set({online:true})
-        }
-        else{
-          socket.disconnect()
-        }
-      }
-      catch(err){
-        socket.disconnect()
-      }
-    })
-  })
+  var address = socket.request.connection.remoteAddress
+  console.log('New connection from ' + address);
   socket.on("disconnect", () => {
-    console.log(`${userData.name} has disconnected - id: ${userData.id}`)
-    db.ref(`${auth}/status`).set({online:false})
+    console.log(`${address} has disconnected`)
   })
 })
 

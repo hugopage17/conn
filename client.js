@@ -1,19 +1,8 @@
-var net = require('net');
+const socketIo = require("socket.io")
 var process = require('process')
 var colors = require('colors');
 
-var client = new net.Socket();
-client.connect(5000, '35.168.8.55', function(){
-  var args = process.argv.slice(2)[0];
-  client.write(args)
-});
+const io = require("socket.io-client"),
+    ioClient = io.connect("35.168.8.55:5000");
 
-client.on('data', function(data) {
-  const msg = data.toString()
-	console.log(msg.green)
-})
-
-client.on('error', function(data) {
-  const msg = data.toString()
-	console.log(msg.red)
-})
+ioClient.on("seq-num", (msg) => console.info(msg));
